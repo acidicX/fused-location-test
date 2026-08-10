@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fused Location Test</string>
+    <string name="latitude_label">Latitude</string>
+    <string name="longitude_label">Longitude</string>
+    <string name="lock_status_label">Lock status</string>
+    <string name="grant_permission">Grant location permission</string>
+    <string name="coordinate_unknown">Waiting for location…</string>
+    <string name="lock_status_locked">Locked</string>
+    <string name="lock_status_searching">Searching…</string>
+    <string name="lock_status_permission_required">Permission required</string>
+    <string name="lock_status_unavailable">Fused provider unavailable</string>
+</resources>
