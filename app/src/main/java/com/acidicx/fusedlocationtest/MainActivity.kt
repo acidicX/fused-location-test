@@ -81,15 +81,18 @@ class MainActivity : Activity() {
 
         restoreToggleSelections()
         apiModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
             saveToggleSelections()
             updateProviderModeAvailability()
             restartLocationUpdatesIfAllowed()
         }
         providerModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
             saveToggleSelections()
             restartLocationUpdatesIfAllowed()
         }
         gmsModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
             saveToggleSelections()
             restartLocationUpdatesIfAllowed()
         }
@@ -179,8 +182,7 @@ class MainActivity : Activity() {
     }
 
     private fun showPermissionRequiredState() {
-        latitudeValue.text = getString(R.string.coordinate_unknown)
-        longitudeValue.text = getString(R.string.coordinate_unknown)
+        clearCoordinates()
         lockStatusValue.text = getString(R.string.lock_status_permission_required)
         permissionButton.visibility = View.VISIBLE
         permissionButton.isEnabled = true
@@ -213,6 +215,11 @@ class MainActivity : Activity() {
             else -> provider
         }
         return getString(R.string.lock_status_provider_unavailable, providerLabel)
+    }
+
+    private fun clearCoordinates() {
+        latitudeValue.text = getString(R.string.coordinate_unknown)
+        longitudeValue.text = getString(R.string.coordinate_unknown)
     }
 
     override fun onRequestPermissionsResult(
