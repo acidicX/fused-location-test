@@ -77,11 +77,14 @@ class MainActivity : Activity() {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_LOCATION)
         }
 
+        restoreToggleSelections()
         apiModeGroup.setOnCheckedChangeListener { _, _ ->
+            saveToggleSelections()
             updateProviderModeAvailability()
             restartLocationUpdatesIfAllowed()
         }
         providerModeGroup.setOnCheckedChangeListener { _, _ ->
+            saveToggleSelections()
             restartLocationUpdatesIfAllowed()
         }
         updateProviderModeAvailability()
@@ -248,7 +251,36 @@ class MainActivity : Activity() {
         }
         if (useGmsFused) {
             providerModeGroup.check(R.id.providerModeFused)
+            saveToggleSelections()
         }
+    }
+
+    private fun saveToggleSelections() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putInt(PREF_KEY_API_MODE, apiModeGroup.checkedRadioButtonId)
+            .putInt(PREF_KEY_PROVIDER_MODE, providerModeGroup.checkedRadioButtonId)
+            .apply()
+    }
+
+    private fun restoreToggleSelections() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val savedApiMode = prefs.getInt(PREF_KEY_API_MODE, R.id.apiModeFramework)
+        val savedProviderMode = prefs.getInt(PREF_KEY_PROVIDER_MODE, R.id.providerModeFused)
+
+        val apiModeId = when (savedApiMode) {
+            R.id.apiModeGms -> R.id.apiModeGms
+            else -> R.id.apiModeFramework
+        }
+        val providerModeId = when (savedProviderMode) {
+            R.id.providerModeGps -> R.id.providerModeGps
+            R.id.providerModeNetwork -> R.id.providerModeNetwork
+            else -> R.id.providerModeFused
+        }
+
+        apiModeGroup.check(apiModeId)
+        providerModeGroup.check(providerModeId)
+        Log.d(TAG, "Restored toggles apiModeId=$apiModeId, providerModeId=$providerModeId")
     }
 
     private fun startGmsFusedLocationUpdates() {
@@ -296,6 +328,9 @@ class MainActivity : Activity() {
 
     companion object {
         private const val TAG = "FusedLocationTest"
+        private const val PREFS_NAME = "location_test_prefs"
+        private const val PREF_KEY_API_MODE = "pref_key_api_mode"
+        private const val PREF_KEY_PROVIDER_MODE = "pref_key_provider_mode"
         private const val REQUEST_CODE_LOCATION = 1001
         private const val FUSED_REQUEST_INTERVAL_MS = 2_000L
         private const val FUSED_REQUEST_MIN_INTERVAL_MS = 1_000L
