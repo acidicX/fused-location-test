@@ -11,8 +11,8 @@ android {
         applicationId = "com.acidicx.fusedlocationtest"
         minSdk = 31
         targetSdk = 34
-        versionCode = 3
-        versionName = "v3"
+        versionCode = 4
+        versionName = "v4"
     }
 
     buildTypes {
