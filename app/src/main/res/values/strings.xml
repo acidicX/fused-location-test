@@ -20,6 +20,6 @@
     <string name="lock_status_locked">Locked</string>
     <string name="lock_status_searching">Searching…</string>
     <string name="lock_status_permission_required">Permission required</string>
-    <string name="lock_status_unavailable">Fused provider unavailable</string>
+    <string name="lock_status_provider_unavailable">%1$s provider unavailable</string>
     <string name="lock_status_location_off">Location turned off</string>
 </resources>

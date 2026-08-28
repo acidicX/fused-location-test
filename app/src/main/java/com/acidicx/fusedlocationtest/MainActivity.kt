@@ -57,7 +57,7 @@ class MainActivity : Activity() {
 
         override fun onProviderDisabled(provider: String) {
             Log.d(TAG, "Framework provider disabled: $provider")
-            lockStatusValue.text = getString(R.string.lock_status_unavailable)
+            lockStatusValue.text = providerUnavailableStatusText(provider)
         }
     }
 
@@ -142,7 +142,7 @@ class MainActivity : Activity() {
 
         if (!locationManager.hasProvider(effectiveProvider)) {
             permissionButton.visibility = View.GONE
-            lockStatusValue.text = getString(R.string.lock_status_unavailable)
+            lockStatusValue.text = providerUnavailableStatusText(effectiveProvider)
             Log.w(TAG, "Requested framework provider unavailable: $effectiveProvider")
             return
         }
@@ -203,6 +203,16 @@ class MainActivity : Activity() {
         } else {
             getString(R.string.lock_status_searching)
         }
+    }
+
+    private fun providerUnavailableStatusText(provider: String): String {
+        val providerLabel = when (provider) {
+            LocationManager.GPS_PROVIDER -> getString(R.string.provider_mode_gps)
+            LocationManager.NETWORK_PROVIDER -> getString(R.string.provider_mode_network)
+            LocationManager.FUSED_PROVIDER -> getString(R.string.provider_mode_fused)
+            else -> provider
+        }
+        return getString(R.string.lock_status_provider_unavailable, providerLabel)
     }
 
     override fun onRequestPermissionsResult(
