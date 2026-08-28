@@ -31,6 +31,7 @@ class MainActivity : Activity() {
     private lateinit var permissionButton: Button
     private lateinit var apiModeGroup: RadioGroup
     private lateinit var providerModeGroup: RadioGroup
+    private lateinit var gmsModeGroup: RadioGroup
 
     private val gmsLocationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -56,7 +57,7 @@ class MainActivity : Activity() {
 
         override fun onProviderDisabled(provider: String) {
             Log.d(TAG, "Framework provider disabled: $provider")
-            lockStatusValue.text = getString(R.string.lock_status_unavailable)
+            lockStatusValue.text = providerUnavailableStatusText(provider)
         }
     }
 
@@ -72,6 +73,7 @@ class MainActivity : Activity() {
         permissionButton = findViewById(R.id.permissionButton)
         apiModeGroup = findViewById(R.id.apiModeGroup)
         providerModeGroup = findViewById(R.id.providerModeGroup)
+        gmsModeGroup = findViewById(R.id.gmsModeGroup)
 
         permissionButton.setOnClickListener {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_CODE_LOCATION)
@@ -79,11 +81,18 @@ class MainActivity : Activity() {
 
         restoreToggleSelections()
         apiModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
             saveToggleSelections()
             updateProviderModeAvailability()
             restartLocationUpdatesIfAllowed()
         }
         providerModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
+            saveToggleSelections()
+            restartLocationUpdatesIfAllowed()
+        }
+        gmsModeGroup.setOnCheckedChangeListener { _, _ ->
+            clearCoordinates()
             saveToggleSelections()
             restartLocationUpdatesIfAllowed()
         }
@@ -136,7 +145,7 @@ class MainActivity : Activity() {
 
         if (!locationManager.hasProvider(effectiveProvider)) {
             permissionButton.visibility = View.GONE
-            lockStatusValue.text = getString(R.string.lock_status_unavailable)
+            lockStatusValue.text = providerUnavailableStatusText(effectiveProvider)
             Log.w(TAG, "Requested framework provider unavailable: $effectiveProvider")
             return
         }
@@ -173,8 +182,7 @@ class MainActivity : Activity() {
     }
 
     private fun showPermissionRequiredState() {
-        latitudeValue.text = getString(R.string.coordinate_unknown)
-        longitudeValue.text = getString(R.string.coordinate_unknown)
+        clearCoordinates()
         lockStatusValue.text = getString(R.string.lock_status_permission_required)
         permissionButton.visibility = View.VISIBLE
         permissionButton.isEnabled = true
@@ -197,6 +205,21 @@ class MainActivity : Activity() {
         } else {
             getString(R.string.lock_status_searching)
         }
+    }
+
+    private fun providerUnavailableStatusText(provider: String): String {
+        val providerLabel = when (provider) {
+            LocationManager.GPS_PROVIDER -> getString(R.string.provider_mode_gps)
+            LocationManager.NETWORK_PROVIDER -> getString(R.string.provider_mode_network)
+            LocationManager.FUSED_PROVIDER -> getString(R.string.provider_mode_fused)
+            else -> provider
+        }
+        return getString(R.string.lock_status_provider_unavailable, providerLabel)
+    }
+
+    private fun clearCoordinates() {
+        latitudeValue.text = getString(R.string.coordinate_unknown)
+        longitudeValue.text = getString(R.string.coordinate_unknown)
     }
 
     override fun onRequestPermissionsResult(
@@ -246,13 +269,17 @@ class MainActivity : Activity() {
     private fun updateProviderModeAvailability() {
         val useGmsFused = selectedApiMode() == ApiMode.GMS_FUSED
         providerModeGroup.isEnabled = !useGmsFused
+        gmsModeGroup.isEnabled = useGmsFused
         for (i in 0 until providerModeGroup.childCount) {
             providerModeGroup.getChildAt(i).isEnabled = !useGmsFused
         }
+        for (i in 0 until gmsModeGroup.childCount) {
+            gmsModeGroup.getChildAt(i).isEnabled = useGmsFused
+        }
         if (useGmsFused) {
             providerModeGroup.check(R.id.providerModeFused)
-            saveToggleSelections()
         }
+        saveToggleSelections()
     }
 
     private fun saveToggleSelections() {
@@ -260,6 +287,7 @@ class MainActivity : Activity() {
             .edit()
             .putInt(PREF_KEY_API_MODE, apiModeGroup.checkedRadioButtonId)
             .putInt(PREF_KEY_PROVIDER_MODE, providerModeGroup.checkedRadioButtonId)
+            .putInt(PREF_KEY_GMS_MODE, gmsModeGroup.checkedRadioButtonId)
             .apply()
     }
 
@@ -267,6 +295,7 @@ class MainActivity : Activity() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val savedApiMode = prefs.getInt(PREF_KEY_API_MODE, R.id.apiModeFramework)
         val savedProviderMode = prefs.getInt(PREF_KEY_PROVIDER_MODE, R.id.providerModeFused)
+        val savedGmsMode = prefs.getInt(PREF_KEY_GMS_MODE, R.id.gmsModeHighAccuracy)
 
         val apiModeId = when (savedApiMode) {
             R.id.apiModeGms -> R.id.apiModeGms
@@ -277,20 +306,28 @@ class MainActivity : Activity() {
             R.id.providerModeNetwork -> R.id.providerModeNetwork
             else -> R.id.providerModeFused
         }
+        val gmsModeId = when (savedGmsMode) {
+            R.id.gmsModeBalanced -> R.id.gmsModeBalanced
+            R.id.gmsModeLowPower -> R.id.gmsModeLowPower
+            else -> R.id.gmsModeHighAccuracy
+        }
 
         apiModeGroup.check(apiModeId)
         providerModeGroup.check(providerModeId)
-        Log.d(TAG, "Restored toggles apiModeId=$apiModeId, providerModeId=$providerModeId")
+        gmsModeGroup.check(gmsModeId)
+        Log.d(TAG, "Restored toggles apiModeId=$apiModeId, providerModeId=$providerModeId, gmsModeId=$gmsModeId")
     }
 
     private fun startGmsFusedLocationUpdates() {
         permissionButton.visibility = View.GONE
         lockStatusValue.text = getString(R.string.lock_status_searching)
-        val request = Builder(Priority.PRIORITY_HIGH_ACCURACY, FUSED_REQUEST_INTERVAL_MS)
+        val selectedGmsMode = selectedGmsMode()
+        val request = Builder(selectedGmsMode.priority, FUSED_REQUEST_INTERVAL_MS)
             .setMinUpdateIntervalMillis(FUSED_REQUEST_MIN_INTERVAL_MS)
-            .setWaitForAccurateLocation(true)
+            .setWaitForAccurateLocation(selectedGmsMode == GmsMode.HIGH_ACCURACY)
             .setMaxUpdateDelayMillis(MAX_FUSED_GPS_INTERVAL_MS)
             .build()
+        Log.d(TAG, "GMS request mode=${selectedGmsMode.name}, priority=${selectedGmsMode.priority}")
 
         try {
             fusedLocationClient.lastLocation
@@ -326,11 +363,26 @@ class MainActivity : Activity() {
         GMS_FUSED,
     }
 
+    private fun selectedGmsMode(): GmsMode {
+        return when (gmsModeGroup.checkedRadioButtonId) {
+            R.id.gmsModeBalanced -> GmsMode.BALANCED
+            R.id.gmsModeLowPower -> GmsMode.LOW_POWER
+            else -> GmsMode.HIGH_ACCURACY
+        }
+    }
+
+    private enum class GmsMode(val priority: Int) {
+        HIGH_ACCURACY(Priority.PRIORITY_HIGH_ACCURACY),
+        BALANCED(Priority.PRIORITY_BALANCED_POWER_ACCURACY),
+        LOW_POWER(Priority.PRIORITY_LOW_POWER),
+    }
+
     companion object {
         private const val TAG = "FusedLocationTest"
         private const val PREFS_NAME = "location_test_prefs"
         private const val PREF_KEY_API_MODE = "pref_key_api_mode"
         private const val PREF_KEY_PROVIDER_MODE = "pref_key_provider_mode"
+        private const val PREF_KEY_GMS_MODE = "pref_key_gms_mode"
         private const val REQUEST_CODE_LOCATION = 1001
         private const val FUSED_REQUEST_INTERVAL_MS = 2_000L
         private const val FUSED_REQUEST_MIN_INTERVAL_MS = 1_000L
