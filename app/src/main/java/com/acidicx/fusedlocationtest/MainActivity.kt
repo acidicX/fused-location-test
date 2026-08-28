@@ -87,8 +87,10 @@ class MainActivity : Activity() {
         permissionButton.visibility = View.GONE
         lockStatusValue.text = getString(R.string.lock_status_searching)
 
-        val request = LocationRequest.Builder(2_000L)
-            .setMinUpdateIntervalMillis(1_000L)
+        // Newer fused provider logic only activates GPS for high-accuracy requests at <= 5s.
+        val fusedIntervalMillis = minOf(FUSED_REQUEST_INTERVAL_MS, MAX_FUSED_GPS_INTERVAL_MS)
+        val request = LocationRequest.Builder(fusedIntervalMillis)
+            .setMinUpdateIntervalMillis(minOf(FUSED_REQUEST_MIN_INTERVAL_MS, fusedIntervalMillis))
             .setQuality(LocationRequest.QUALITY_HIGH_ACCURACY)
             .build()
 
@@ -148,5 +150,8 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQUEST_CODE_LOCATION = 1001
+        private const val FUSED_REQUEST_INTERVAL_MS = 2_000L
+        private const val FUSED_REQUEST_MIN_INTERVAL_MS = 1_000L
+        private const val MAX_FUSED_GPS_INTERVAL_MS = 5_000L
     }
 }
