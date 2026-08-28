@@ -8,6 +8,10 @@
     <string name="provider_mode_fused">Fused</string>
     <string name="provider_mode_gps">GPS</string>
     <string name="provider_mode_network">Network</string>
+    <string name="gms_mode_label">GMS request mode</string>
+    <string name="gms_mode_high_accuracy">High accuracy</string>
+    <string name="gms_mode_balanced">Balanced</string>
+    <string name="gms_mode_low_power">Low power</string>
     <string name="latitude_label">Latitude</string>
     <string name="longitude_label">Longitude</string>
     <string name="lock_status_label">Lock status</string>
